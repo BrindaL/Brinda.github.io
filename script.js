@@ -12,6 +12,7 @@ function setupCanvas() {
     canvas.style.left = '0';
     canvas.style.zIndex = '-1';
     canvas.style.pointerEvents = 'none';
+    canvas.style.transform = 'translateZ(0)';
 }
 
 // Cursor position and color circles
