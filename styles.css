@@ -375,7 +375,7 @@ footer {
 
   /* Adjust navbar for mobile */
   .navbar {
-    background-color: rgba(255, 255, 255, 0.9);
+    /* background-color: rgba(255, 255, 255, 0.9); */
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
   }
