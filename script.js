@@ -5,22 +5,28 @@ document.body.appendChild(canvas);
 
 // Canvas setup
 function setupCanvas() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    canvas.style.position = 'fixed';
-    canvas.style.top = '0';
-    canvas.style.left = '0';
-    canvas.style.zIndex = '-1';
-    canvas.style.pointerEvents = 'none';
-    canvas.style.transform = 'translateZ(0)';
+  const pixelRatio = window.devicePixelRatio || 1;
+  canvas.width = window.innerWidth * pixelRatio;
+  canvas.height = window.innerHeight * pixelRatio;
+  canvas.style.width = window.innerWidth + 'px';
+  canvas.style.height = window.innerHeight + 'px';
+  ctx.scale(pixelRatio, pixelRatio);
+  
+  canvas.style.position = 'fixed';
+  canvas.style.top = '0';
+  canvas.style.left = '0';
+  canvas.style.zIndex = '-1';
+  canvas.style.pointerEvents = 'none';
+  canvas.style.touchAction = 'none';
 }
 
 // Cursor position and color circles
 let circles = [];
-let mouseX = 0;
-let mouseY = 0;
-let targetX = 0;
-let targetY = 0;
+let mouseX = window.innerWidth / 2;
+let mouseY = window.innerHeight / 2;
+let targetX = mouseX;
+let targetY = mouseY;
+let isTouch = false;
 
 class Circle {
     constructor(x, y, radius, color) {
@@ -30,6 +36,10 @@ class Circle {
         this.targetRadius = radius;
         this.color = color;
         this.alpha = 1;
+        this.velocity = {
+            x: (Math.random() - 0.5) * 2,
+            y: (Math.random() - 0.5) * 2
+        };
     }
 
     draw() {
@@ -41,6 +51,11 @@ class Circle {
     }
 
     update() {
+        if (isTouch) {
+            this.x += this.velocity.x;
+            this.y += this.velocity.y;
+        }
+        
         this.radius += (this.targetRadius - this.radius) * 0.1;
         this.alpha *= 0.98;
         return this.alpha > 0.01;
@@ -49,34 +64,52 @@ class Circle {
 
 // Color palette
 const colors = [
-    { r: 226, g: 95, b: 70 },  // Red
+    { r: 226, g: 95, b: 70 },   // Red
     { r: 242, g: 228, b: 218 }, // Light beige
     { r: 212, g: 198, b: 189 }  // Dark beige
 ];
 
-// Mouse move handler
-document.addEventListener('mousemove', (e) => {
-    mouseX = e.clientX;
-    mouseY = e.clientY;
+function handleInteraction(x, y, isTouch = false) {
+    mouseX = x;
+    mouseY = y;
     
-    // Add new circle on mouse move
-    if (Math.random() > 0.8) {
+    if (Math.random() > (isTouch ? 0.5 : 0.8)) {
         const color = colors[Math.floor(Math.random() * colors.length)];
         circles.push(new Circle(
-            mouseX,
-            mouseY,
-            Math.random() * 50 + 20,
+            x,
+            y,
+            Math.random() * (isTouch ? 70 : 50) + 20,
             color
         ));
     }
+}
+
+// Mouse event handlers
+document.addEventListener('mousemove', (e) => {
+    isTouch = false;
+    handleInteraction(e.clientX, e.clientY);
 });
+
+// Touch event handlers
+document.addEventListener('touchstart', (e) => {
+    isTouch = true;
+    if (e.touches[0]) {
+        handleInteraction(e.touches[0].clientX, e.touches[0].clientY, true);
+    }
+}, { passive: true });
+
+document.addEventListener('touchmove', (e) => {
+    if (e.touches[0]) {
+        handleInteraction(e.touches[0].clientX, e.touches[0].clientY, true);
+    }
+}, { passive: true });
 
 // Animation loop
 function animate() {
     ctx.fillStyle = 'rgba(248, 249, 250, 0.1)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, canvas.width / (window.devicePixelRatio || 1), 
+                      canvas.height / (window.devicePixelRatio || 1));
     
-    // Update and draw circles
     circles = circles.filter(circle => {
         circle.draw();
         return circle.update();
@@ -91,29 +124,38 @@ function init() {
     animate();
     
     // Handle window resize
-    window.addEventListener('resize', setupCanvas);
+    window.addEventListener('resize', () => {
+        setupCanvas();
+        // Reset positions on resize
+        mouseX = window.innerWidth / 2;
+        mouseY = window.innerHeight / 2;
+    });
 }
 
 // Start animation when DOM is loaded
 document.addEventListener('DOMContentLoaded', init);
 
-// Custom cursor
+// Custom cursor (only show on non-touch devices)
 const cursor = document.querySelector('.cursor-follower');
-let cursorX = 0;
-let cursorY = 0;
+if (cursor) {
+    // Check if device has touch capability
+    if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+        cursor.style.display = 'none';
+    } else {
+        let cursorX = 0;
+        let cursorY = 0;
 
-function updateCursor() {
-    cursorX += (mouseX - cursorX) * 0.1;
-    cursorY += (mouseY - cursorY) * 0.1;
-    
-    if (cursor) {
-        cursor.style.transform = `translate(${cursorX}px, ${cursorY}px) translate(-50%, -50%)`;
+        function updateCursor() {
+            cursorX += (mouseX - cursorX) * 0.1;
+            cursorY += (mouseY - cursorY) * 0.1;
+            
+            cursor.style.transform = `translate(${cursorX}px, ${cursorY}px) translate(-50%, -50%)`;
+            requestAnimationFrame(updateCursor);
+        }
+
+        updateCursor();
     }
-    
-    requestAnimationFrame(updateCursor);
 }
-
-updateCursor();
 
 // Smooth scrolling for navigation links
 document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
@@ -147,7 +189,7 @@ window.addEventListener("scroll", () => {
   lastScroll = currentScroll
 })
 
-// Add animation to timeline items
+// animation to timeline items
 const observerOptions = {
   root: null,
   rootMargin: "0px",
